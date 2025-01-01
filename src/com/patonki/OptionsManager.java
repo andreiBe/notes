@@ -48,7 +48,7 @@ public class OptionsManager {
             int firstEquals = line.indexOf('=');
             if (firstEquals == -1) continue;
             String variable = line.substring(0, firstEquals);
-            String value = line.substring(firstEquals+1);
+            String value = line.substring(firstEquals+1).trim();
             if (value.equals("null")) value = null;
             values.put(variable, value);
         }

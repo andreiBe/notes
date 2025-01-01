@@ -21,10 +21,11 @@ public class Ohjelma extends Application {
         STAGE = stage;
 
 
+        FolderHandler folderHandler = new FolderHandler("data", true);
         options = new OptionsManager(configFilePath);
         options.readConfig();
 
-        FolderHandler folderHandler = new FolderHandler("data", true);
+
 
         /*Ladataan asetukset*/
         int width=options.getIntProperty("width");

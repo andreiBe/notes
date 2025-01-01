@@ -6,7 +6,6 @@ import java.net.URLConnection;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.function.Consumer;
@@ -51,7 +50,6 @@ public class Storage {
         };
         this.saveInterval = new Timer();
         this.saveInterval.scheduleAtFixedRate(timerTask, 1000, 3000);
-        setCurrentContent();
     }
     public void onClose() {
         this.writeToFile();
@@ -83,12 +81,13 @@ public class Storage {
         this.user = options.getStringProperty("user");
 
         this.syncWithFtpServer();
+        setCurrentContent();
     }
 
     public static class DecryptionError extends IOException{ }
 
     private synchronized String currentContentRaw() throws IOException {
-        String content = new String(Files.readAllBytes(Paths.get(this.path)));
+        String content = new String(Files.readAllBytes(Paths.get(this.path)), StandardCharsets.UTF_8);
         if (this.password != null) {
             try {
                 return Encryption.decrypt(content, this.password);
@@ -146,7 +145,7 @@ public class Storage {
         this.currentContent = value;
     }
 
-    private synchronized Optional<IOException> unzipData(String fileName) {
+    private synchronized void unzipData(String fileName) throws IOException {
         Path zipFile = Paths.get(fileName);
         Path targetDir = Paths.get("data");
         try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zipFile))) {
@@ -156,7 +155,8 @@ public class Storage {
                 if (zipEntry.isDirectory()) {
                     Files.createDirectories(resolvedPath);
                 } else {
-                    Files.createDirectories(resolvedPath.getParent()); // Ensure parent directories exist
+                    Files.createDirectories(resolvedPath.getParent()); // Ensure parent directories exists
+                    System.out.println("Writing " + resolvedPath);
                     try (OutputStream os = Files.newOutputStream(resolvedPath)) {
                         byte[] buffer = new byte[4096];
                         int bytesRead;
@@ -167,12 +167,9 @@ public class Storage {
                 }
                 zis.closeEntry();
             }
-            return Optional.empty();
-        } catch (IOException e) {
-            return Optional.of(e);
         }
     }
-    private synchronized Optional<IOException> zipData(String filename) {
+    private synchronized void zipData(String filename) throws IOException {
         Path sourceDir = Paths.get("data");
         try (ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(Paths.get(filename)));
              Stream<Path> pathStream = Files.walk(sourceDir)
@@ -189,20 +186,15 @@ public class Storage {
                             throw new UncheckedIOException(e);
                         }
                     });
-            return Optional.empty();
-        } catch (IOException e) {
-            return Optional.of(e);
         }
-
     }
-    public synchronized Optional<IOException> pushToFtpServer() {
+    public synchronized void pushToFtpServer() {
         if (this.ftpHost == null || this.ftpPassword == null || this.ftpUsername == null || this.user == null) {
-            return Optional.of(new IOException("No ftp options configured!"));
+            return;
         }
         String fileName = String.format("notes_%s.zip", this.user);
-        Optional<IOException> res = this.zipData(fileName);
-        if (res.isPresent()) return res;
         try {
+            this.zipData(fileName);
             String username = URLEncoder.encode("mr@andrei.belogurov.org", "UTF-8");
             String password = URLEncoder.encode("mfw94Ce=Q5uV", "UTF-8");
 
@@ -219,18 +211,15 @@ public class Storage {
                     outputStream.write(buffer, 0, bytesRead);
                 }
             }
-            return Optional.empty();
         }
-        catch (FileNotFoundException e) {
-            return Optional.empty();
-        }
+        catch (FileNotFoundException ignored) {}
         catch (IOException e) {
-            return Optional.of(e);
+            errorHandler.accept(e);
         }
     }
-    public synchronized Optional<IOException> syncWithFtpServer() {
+    public synchronized void syncWithFtpServer() {
         if (this.ftpHost == null || this.ftpPassword == null || this.ftpUsername == null || this.user == null) {
-            return Optional.of(new IOException("No ftp options configured!"));
+            return;
         }
         try {
             String host = URLEncoder.encode(this.ftpHost, "UTF-8");
@@ -246,13 +235,11 @@ public class Storage {
             Files.copy(inputStream, new File(fileName).toPath(), StandardCopyOption.REPLACE_EXISTING);
             inputStream.close();
 
-            return this.unzipData(fileName);
+            this.unzipData(fileName);
         }
-        catch (FileNotFoundException e) {
-            return Optional.empty();
-        }
+        catch (FileNotFoundException ignored) {}
         catch (IOException e) {
-            return Optional.of(e);
+            errorHandler.accept(e);
         }
 
     }

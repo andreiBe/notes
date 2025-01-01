@@ -29,15 +29,13 @@ public class Controller {
 
     public void init(OptionsManager options, FolderHandler folder) {
         this.options = options;
-        loadOptions();
 
         this.field = new AutocompletionTextField();
+
         //lisätään kaikki saatavilla olevat muistiinpanot listaan, josta tekstiruutu etsii ehdotettavia muistiinpanoja
         this.field.getEntries().addAll(folder.fileNames());
 
         box.getChildren().add(field); //lisätään tekstiruutu sliderin viereen
-
-        setContent();
         //Kun tekstialuetta klikkaa, on mahdollisuus poistaa muistiinpano
         MenuItem deleteFileContextMenu = new MenuItem("Delete note");
         MenuItem syncWithFtp = new MenuItem("Sync with FTP server");
@@ -48,8 +46,10 @@ public class Controller {
 
         // Event listeners
         deleteFileContextMenu.setOnAction(e -> deleteCurrentFile());
-        syncWithFtp.setOnAction(e -> storage.syncWithFtpServer().ifPresent(this::handleError));
-        pushToFtp.setOnAction(e -> storage.pushToFtpServer().ifPresent(this::handleError));
+        syncWithFtp.setOnAction(e -> storage.syncWithFtpServer());
+        pushToFtp.setOnAction(e -> storage.pushToFtpServer());
+        loadOptions();
+        setContent();
 
         field.textProperty().addListener((observableValue, s, t1) -> fieldTyped(t1));
         area.textProperty().addListener((observableValue, s, t1) -> areaTyped(t1));

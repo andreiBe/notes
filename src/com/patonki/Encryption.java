@@ -5,6 +5,7 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.security.spec.KeySpec;
 import java.util.Base64;
 
@@ -20,21 +21,21 @@ public class Encryption {
 
     public static String encrypt(String input, String password) throws Exception{
         SecretKey key = getKeyFromPassword(password);
-        System.out.println("Encrypting with " + password + " " + key+" " +System.currentTimeMillis());
+        //System.out.println("Encrypting with " + password + " " + key+" " +System.currentTimeMillis());
         Cipher cipher = Cipher.getInstance("AES");
         cipher.init(Cipher.ENCRYPT_MODE, key);
-        byte[] cipherText = cipher.doFinal(input.getBytes());
+        byte[] cipherText = cipher.doFinal(input.getBytes(StandardCharsets.UTF_8));
         return Base64.getEncoder()
                 .encodeToString(cipherText);
     }
 
     public static String decrypt(String cipherText, String password) throws Exception {
         SecretKey key = getKeyFromPassword(password);
-        System.out.println("Decrypting with " +password +" " + key +" " +System.currentTimeMillis());
+        //System.out.println("Decrypting with " +password +" " + key +" " +System.currentTimeMillis());
         Cipher cipher = Cipher.getInstance("AES");
         cipher.init(Cipher.DECRYPT_MODE, key);
         byte[] plainText = cipher.doFinal(Base64.getDecoder()
                 .decode(cipherText));
-        return new String(plainText);
+        return new String(plainText, StandardCharsets.UTF_8);
     }
 }
