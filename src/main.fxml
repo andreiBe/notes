@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import java.lang.*?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.control.Slider?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.*?>
+
+<AnchorPane prefHeight="291.0" prefWidth="307.0" xmlns="http://javafx.com/javafx/8" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.patonki.Controller">
+   <children>
+      <VBox layoutX="229.0" layoutY="131.0" prefHeight="200.0" prefWidth="100.0" AnchorPane.bottomAnchor="0.0" AnchorPane.leftAnchor="0.0" AnchorPane.rightAnchor="0.0" AnchorPane.topAnchor="0.0">
+         <children>
+            <HBox fx:id="box" alignment="CENTER_LEFT" maxHeight="25.0" prefHeight="67.0" prefWidth="400.0">
+               <children>
+                  <Slider fx:id="slider" max="50.0" min="6.0" prefHeight="29.0" prefWidth="170.0" value="20.0" />
+               </children>
+            </HBox>
+            <TextArea fx:id="area" prefHeight="331.0" prefWidth="400.0" wrapText="true" VBox.vgrow="ALWAYS" />
+         </children>
+      </VBox>
+   </children>
+</AnchorPane>
