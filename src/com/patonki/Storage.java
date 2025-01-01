@@ -146,8 +146,8 @@ public class Storage {
         this.currentContent = value;
     }
 
-    private synchronized Optional<IOException> unzipData() {
-        Path zipFile = Paths.get("notes.zip");
+    private synchronized Optional<IOException> unzipData(String fileName) {
+        Path zipFile = Paths.get(fileName);
         Path targetDir = Paths.get("data");
         try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zipFile))) {
             ZipEntry zipEntry;
@@ -172,9 +172,9 @@ public class Storage {
             return Optional.of(e);
         }
     }
-    private synchronized Optional<IOException> zipData() {
+    private synchronized Optional<IOException> zipData(String filename) {
         Path sourceDir = Paths.get("data");
-        try (ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(Paths.get("notes.zip")));
+        try (ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(Paths.get(filename)));
              Stream<Path> pathStream = Files.walk(sourceDir)
         ) {
             pathStream
@@ -199,12 +199,13 @@ public class Storage {
         if (this.ftpHost == null || this.ftpPassword == null || this.ftpUsername == null || this.user == null) {
             return Optional.of(new IOException("No ftp options configured!"));
         }
-        Optional<IOException> res = this.zipData();
+        String fileName = String.format("notes_%s.zip", this.user);
+        Optional<IOException> res = this.zipData(fileName);
         if (res.isPresent()) return res;
         try {
             String username = URLEncoder.encode("mr@andrei.belogurov.org", "UTF-8");
             String password = URLEncoder.encode("mfw94Ce=Q5uV", "UTF-8");
-            String fileName = String.format("notes_%s.zip", this.user);
+
             String ftpUrl = String.format(
                     "ftp://%s:%s@andrei.belogurov.org:21/%s", username, password, fileName);
 
@@ -245,7 +246,7 @@ public class Storage {
             Files.copy(inputStream, new File(fileName).toPath(), StandardCopyOption.REPLACE_EXISTING);
             inputStream.close();
 
-            return this.unzipData();
+            return this.unzipData(fileName);
         }
         catch (FileNotFoundException e) {
             return Optional.empty();
