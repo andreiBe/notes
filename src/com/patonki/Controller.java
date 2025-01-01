@@ -2,6 +2,7 @@ package com.patonki;
 
 import com.patonki.helper.FolderHandler;
 import com.patonki.javafx.AutocompletionTextField;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
@@ -56,15 +57,17 @@ public class Controller {
         slider.valueProperty().addListener((observableValue, number, t1) -> sliderMoved(t1.doubleValue()));
     }
     private void handleError(Exception e) {
-        if (e instanceof Storage.DecryptionError) {
-            area.textProperty().setValue("Unable to decrypt");
-            return;
-        }
-        field.textProperty().setValue("stack_trace");
-        StringWriter sw = new StringWriter();
-        e.printStackTrace(new PrintWriter(sw));
-        String exceptionAsString = sw.toString();
-        area.textProperty().setValue(exceptionAsString);
+        Platform.runLater(() -> {
+            if (e instanceof Storage.DecryptionError) {
+                area.textProperty().setValue("Unable to decrypt");
+                return;
+            }
+            field.textProperty().setValue("stack_trace");
+            StringWriter sw = new StringWriter();
+            e.printStackTrace(new PrintWriter(sw));
+            String exceptionAsString = sw.toString();
+            area.textProperty().setValue(exceptionAsString);
+        });
     }
     private void deleteCurrentFile() {
         if (storage.deleteCurrent()) { //poistaminen onnistui

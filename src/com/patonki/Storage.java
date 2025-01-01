@@ -31,6 +31,8 @@ public class Storage {
     private boolean changesMadeSinceLastSave = false;
     private final Consumer<IOException> errorHandler;
 
+    private final Object writeLock = new Object();
+
     public Storage(Consumer<IOException> errorHandler) {
         this.errorHandler = errorHandler;
         final int[] intervalI = {0};
@@ -56,21 +58,23 @@ public class Storage {
         this.pushToFtpServer();
         this.saveInterval.cancel();
     }
-    public synchronized boolean deleteCurrent() {
+    public boolean deleteCurrent() {
         return new File(path).delete();
     }
-    public synchronized String fileNameWithoutExtension() {
+    public String fileNameWithoutExtension() {
         return this.path.substring(this.path.lastIndexOf('/') + 1, this.path.lastIndexOf('.'));
     }
 
-    public synchronized void setCurrentFile(String name, String password) {
-        this.password = password;
-        this.path = String.format("data/%s.txt", name);
-        this.currentFile = new File(this.path);
+    public void setCurrentFile(String name, String password) {
+        synchronized (writeLock) {
+            this.password = password;
+            this.path = String.format("data/%s.txt", name);
+            this.currentFile = new File(this.path);
 
-        setCurrentContent();
+            setCurrentContent();
+        }
     }
-    public synchronized boolean exists() {
+    public boolean exists() {
         return currentFile.exists();
     }
 
@@ -86,7 +90,7 @@ public class Storage {
 
     public static class DecryptionError extends IOException{ }
 
-    private synchronized String currentContentRaw() throws IOException {
+    private String currentContentRaw() throws IOException {
         String content = new String(Files.readAllBytes(Paths.get(this.path)), StandardCharsets.UTF_8);
         if (this.password != null) {
             try {
@@ -97,9 +101,15 @@ public class Storage {
         }
         return content;
     }
-    private synchronized void writeToFile() {
-        String value = currentContent;
-        if (value.trim().isEmpty() && !currentFile.exists()) return;
+    private void writeToFile() {
+        Path path;
+        String value;
+        synchronized (writeLock) {
+            value = currentContent;
+            if (value.trim().isEmpty() && !currentFile.exists()) return;
+            path = Paths.get(this.path);
+        }
+
         try {
             if (this.password != null) {
                 if (this.exists()) {
@@ -114,7 +124,7 @@ public class Storage {
                     throw new IOException(e);
                 }
             }
-            Files.write(Paths.get(this.path), value.getBytes(StandardCharsets.UTF_8));
+            Files.write(path, value.getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
             errorHandler.accept(e);
         }
@@ -135,17 +145,17 @@ public class Storage {
             this.errorHandler.accept(e);
         }
     }
-    public synchronized String currentContent() {
+    public String currentContent() {
         return this.currentContent;
     }
 
-    public synchronized void write(String value) {
+    public void write(String value) {
         if (value.equals("Unable to decrypt")) return;
         this.changesMadeSinceLastSave = true;
         this.currentContent = value;
     }
 
-    private synchronized void unzipData(String fileName) throws IOException {
+    private void unzipData(String fileName) throws IOException {
         Path zipFile = Paths.get(fileName);
         Path targetDir = Paths.get("data");
         try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(zipFile))) {
@@ -169,7 +179,7 @@ public class Storage {
             }
         }
     }
-    private synchronized void zipData(String filename) throws IOException {
+    private void zipData(String filename) throws IOException {
         Path sourceDir = Paths.get("data");
         try (ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(Paths.get(filename)));
              Stream<Path> pathStream = Files.walk(sourceDir)
@@ -188,7 +198,7 @@ public class Storage {
                     });
         }
     }
-    public synchronized void pushToFtpServer() {
+    public void pushToFtpServer() {
         if (this.ftpHost == null || this.ftpPassword == null || this.ftpUsername == null || this.user == null) {
             return;
         }
@@ -217,7 +227,7 @@ public class Storage {
             errorHandler.accept(e);
         }
     }
-    public synchronized void syncWithFtpServer() {
+    public void syncWithFtpServer() {
         if (this.ftpHost == null || this.ftpPassword == null || this.ftpUsername == null || this.user == null) {
             return;
         }
